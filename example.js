@@ -5,11 +5,11 @@ var app = express.createServer();
 var informant = require('./');
 var store = new informant.MemStore();
 //var store = new informant.MongoStore();
-app.use(informant.middleware(store));
+app.use(informant.middleware());
 
 app.get('/',function(req,res) {
 	res.send("Hello, World!");
 });
 
-informant.init();
+informant.init(store);
 app.listen(8080);
