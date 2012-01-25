@@ -9,7 +9,10 @@ Memory Store
 Informant is a lightweight way to monitor server resources in real-time.  It can be used as an Express.JS middleware or standalone.  When running as middleware each request is logged to the provided store.
 
 ## Viewing the realtime interface:
-   Navigate to http://<server>:2222/
+   Navigate to 
+```html
+http://<server where you are running informant>:2222/
+```
 	![Screenshot](https://github.com/base698/Informant/raw/master/static/screenshot.png)
 
 ## How to Install
@@ -79,6 +82,7 @@ informant.init(mongo_store);
 ```
 
 MemoryStore example:
+
 ```js
 var MemStore = function() {
    var env_var_mem = parseInt(process.env.INFORMANT_MEM_STORAGE); 
@@ -110,3 +114,4 @@ var MemStore = function() {
 
 };
 ```
+
