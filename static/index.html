@@ -1,0 +1,38 @@
+<!doctype html>
+<html>
+<head>
+<style>
+
+</style>
+</head>
+
+<body>
+	<h1> Hi! </h1>
+	<ul id="servers">
+		<li>Loading...</li>
+	</ul>
+	<div id="main">
+		<div>Chart A</div>
+		<div>Chart B</div>
+		<div>Chart C</div>
+	</div>
+</body>
+
+<script src="/jquery-1.7.1.min.js"></script>
+<script src="/highcharts.js"></script>
+<script src="/socket.io/socket.io.js"></script>
+<script>
+	var socket = io.connect('http://localhost');
+   socket.on('REQUEST', function (data) {
+		  console.log(data);
+	     //socket.emit('my other event', { my: 'data' });
+   });
+
+  socket.on('SYSTEM_INFO', function (data) {
+		  console.log(data);
+   });
+
+</script>
+
+</html>
+
