@@ -55,6 +55,7 @@ div#response {
 	</div>
 </body>
 
+<script src="/underscore-min.js"></script>
 <script src="/jquery-1.7.1.min.js"></script>
 <script src="/highcharts.js"></script>
 <script src="/socket.io/socket.io.js"></script>
@@ -63,34 +64,24 @@ div#response {
 </script>
 <script>
 
-var memory_chart;
-var load_avg_chart;
-var cpu_chart;
 $(document).ready(function() {
-cpu_chart = new Highcharts.Chart({
+cpu_chart_options = {
       chart: {
          renderTo: 'cpu',
-         defaultSeriesType: 'column'
+         defaultSeriesType: 'area'
       },
       title: {
          text: 'CPU Utilization'
       },
       xAxis: {
-         categories: ['CPU 1', 'CPU 2', 'CPU 3', 'CPU 4', 'CPU 5']
+			type: 'datetime',
+			tickPixelInterval: 150
       },
       yAxis: {
-         min: 0,
          title: {
-            text: 'Utilization'
-         },
-         stackLabels: {
-            enabled: true,
-            style: {
-               fontWeight: 'bold',
-               color: (Highcharts.theme && Highcharts.theme.textColor) || 'gray'
-            }
+            text: '% Utilization'
          }
-      },
+		},
       legend: {
          align: 'right',
          x: -100,
@@ -110,47 +101,36 @@ cpu_chart = new Highcharts.Chart({
          }
       },
       plotOptions: {
-         column: {
-            stacking: 'normal',
-            dataLabels: {
-               enabled: true,
-               color: (Highcharts.theme && Highcharts.theme.dataLabelsColor) || 'white'
-            }
+         area: {
+            stacking: 'percent'
          }
       },
        series: [{
          name: 'User',
-         data: [5, 3, 4, 7, 2]
+         data: []
       }, {
          name: 'System',
-         data: [2, 2, 3, 2, 1]
+         data: []
       }, {
          name: 'Idle',
-         data: [3, 4, 4, 2, 5]
+         data: []
       }]
-   });
+   };
 
-load_avg_chart = new Highcharts.Chart({
+load_avg_chart_options = {
       chart: {
          renderTo: 'load_avg',
-         defaultSeriesType: 'spline',
-         marginRight: 130,
-         marginBottom: 25
+         defaultSeriesType: 'spline'
       },
       title: {
          text: 'Load Average'
       },
 		xAxis: {
-			type: 'linear',
+			type: 'datetime',
 			tickPixelInterval:70
 		},
 		yAxis: {
-			min: 0.2,
-			max: 1.2,
-			plotLines: [{
-				value: 0,
-				width: 1
-			}]
+			title: { text: 'Load' }
 		},
       tooltip: {
          formatter: function() {
@@ -159,15 +139,32 @@ load_avg_chart = new Highcharts.Chart({
          }
       },
       legend: {
-         enabled:false
+         align: 'right',
+         x: -100,
+         verticalAlign: 'top',
+         y: 20,
+         floating: true,
+         backgroundColor: (Highcharts.theme && Highcharts.theme.legendBackgroundColorSolid) || 'white',
+         borderColor: '#CCC',
+         borderWidth: 1,
+         shadow: false
       },
-      series: [{
-         name: '5 minute load avg',
-         data: [{x:0,y:0.0},{x:0,y:0.0},{x:0,y:0.0},{x:0,y:0.0},{x:0,y:0.0},{x:0,y:0.0}]
+      series: [
+		{
+         name: '1 minute',
+         data: []
+		},
+		{
+         name: '5 minute',
+         data: []
+      },
+		{
+         name: '15 minute',
+         data: []
       }]
-   });
+   };
    
-	memory_chart = new Highcharts.Chart({
+memory_chart_options = {
 		chart: {
 			renderTo: 'memory',
 			plotBackgroundColor: null,
@@ -203,31 +200,91 @@ load_avg_chart = new Highcharts.Chart({
 				['Total Memory',100.0]
 			]
 		}]
-	});
+	};
 }); 	
+
 </script>
 
 <script>
+
 function update_memory_chart(data) {
 	  var gb = data.totalmem/1024/1024/1024;
-	  memory_chart.setTitle({text:gb+"GB Memory"});
-	  var mem_series = memory_chart.series[0];
+	  memory_chart_options.title = {text:gb+"GB Memory"};
+	  var mem_series = memory_chart_options.series[0];
 	  var free = Math.round(100*(data.freemem/data.totalmem));
 	  var used = Math.round(100 - free);
 	  mem_data = [
 			["Free Memory",free],
 			["Used Memory",used]
 	  ];
-	  mem_series.setData(mem_data);
+	  mem_series.data = mem_data;
+	  new Highcharts.Chart(memory_chart_options);
 }
 
+
+var load_avg_chart = null;
 function update_load_chart(data) {
-	  var series = load_avg_chart.series[0];
-	  series.addPoint({x:points,y:data.loadavg[1]},true,true);
+
+	  if(!load_avg_chart) {
+			var opt_series = load_avg_chart_options.series;
+			var start = new Date();
+			_.each(opt_series,function(item,idx) {
+				for(var i = 0;i<10;i++) {
+					item.data.push({x:start.getTime()+i*1000,y:1});
+				}
+			});
+			console.log(opt_series);
+			load_avg_chart = new Highcharts.Chart(load_avg_chart_options);
+	  }
+
+	  var series = load_avg_chart.series;
+	  var measured_at = new Date(data.measured_at).getTime();
+	  series[0].addPoint({x:measured_at,y:data.loadavg[0]},false,true);
+	  series[1].addPoint({x:measured_at,y:data.loadavg[1]},false,true);
+	  series[2].addPoint({x:measured_at,y:data.loadavg[2]},true,true);
 }
 
+
+var cpu_chart = null;
 function update_cpu_chart(data) {
-	var cpu = data.cpu;
+	var cpus = data.cpus;
+	var xAxis = cpu_chart_options.xAxis;
+	xAxis.catagories = []
+	cpu_chart_options.subtitle = { text: 'Number of CPUs: '+cpus.length };
+
+	var user = 0,system = 0,idle = 0;
+	_.each(cpus,function(element,idx){
+		xAxis.catagories.push(element.model);	
+		//series.name  /series.data
+		// user system idle
+		var times = element.times;
+		user += times.user;
+		system += times.sys;
+		idle += times.idle;
+	});
+	var total = user + system + idle;
+	user=100*user/total;
+	system=100*system/total;
+	idle=100*idle/total;
+	
+	if(!cpu_chart) {
+		var start = new Date(data.measured_at);
+		var opt_series = cpu_chart_options.series;
+		_.each(opt_series,function(item,idx) {
+			for(var i = 0;i<10;i++) {
+				item.data.push({x:start.getTime()+i*1000,y:100});
+			}
+		});
+		cpu_chart = new Highcharts.Chart(cpu_chart_options);
+	}
+
+	var series = cpu_chart.series;	
+	
+	var measured_at = new Date(data.measured_at).getTime();
+	series[0].addPoint({x:measured_at,y:user},false,true);
+	series[1].addPoint({x:measured_at,y:system},false,true);
+	series[2].addPoint({x:measured_at,y:idle},true,true);
+	
 }
 </script>
 <script>
@@ -252,7 +309,6 @@ function update_cpu_chart(data) {
   socket.on('SYSTEM_INFO', function (data) {
 		  console.log(data);
 		  points++;
-		  console.log(points);
 		  var hostname = data.hostname;
 		  $('#hostname').html(hostname);
 		  update_memory_chart(data);
