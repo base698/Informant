@@ -382,7 +382,10 @@ fake_requests = function() {
 	var img = new Image();
 	img.src = 'http://localhost:8080/yo';
 }
-setInterval(fake_requests,1000);
+if(window.location.href.indexOf('fake_data')>=0) {
+	setInterval(fake_requests,1000);
+}
+
 
 socket.on('REQUEST', update_request_data);
 socket.on('SYSTEM_INFO', function (data) {
