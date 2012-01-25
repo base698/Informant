@@ -51,11 +51,11 @@ The Store API is a simple API designed to persist data.  If no store is supplied
 Stores conform to this interface:
 
 ```js
-	cb = function(err,records) {}
+	cb = function(err,records) {};
 	var store = {
-		insert: function(record) {}
-		find: function(query,cb) {}
-		add_machine: function(record) {}
+		insert: function(record) {},
+		find: function(query,cb) {},
+		add_machine: function(record) {},
 		get_machines: function(cb) {}
 	}
 ```
