@@ -207,6 +207,7 @@ memory_chart_options = {
 
 <script>
 
+var mem_chart = null;
 function update_memory_chart(data) {
 	  var gb = data.totalmem/1024/1024/1024;
 	  memory_chart_options.title = {text:gb+"GB Memory"};
@@ -217,8 +218,11 @@ function update_memory_chart(data) {
 			["Free Memory",free],
 			["Used Memory",used]
 	  ];
-	  mem_series.data = mem_data;
-	  new Highcharts.Chart(memory_chart_options);
+	  if(!mem_chart) {
+	  		mem_series.data = mem_data;
+			mem_chart = new Highcharts.Chart(memory_chart_options);
+	  }
+	  mem_chart.series[0].setData(mem_data);
 }
 
 
