@@ -3,17 +3,31 @@
 <head>
 <style>
 
+div#memory {
+	width:50%;
+	height:50%;
+	float:left;
+}
+div#load_avg {
+	width:50%;
+	height:50%;
+	float:left;
+}
+
+
 </style>
 </head>
 
 <body>
-	<h1> Hi! </h1>
+	<h1 id="hostname"> </h1>
+	<!--
 	<ul id="servers">
 		<li>Loading...</li>
 	</ul>
+	-->
 	<div id="main">
-		<div>Chart A</div>
-		<div>Chart B</div>
+		<div id="memory"></div>
+		<div id="load_avg"></div>
 		<div>Chart C</div>
 	</div>
 </body>
@@ -22,7 +36,105 @@
 <script src="/highcharts.js"></script>
 <script src="/socket.io/socket.io.js"></script>
 <script>
+	Highcharts.theme = { colors: ['#4572A7'] };
+</script>
+<script>
+
+var memory_chart;
+var load_avg_chart;
+$(document).ready(function() {
+load_avg_chart = new Highcharts.Chart({
+      chart: {
+         renderTo: 'load_avg',
+         defaultSeriesType: 'spline',
+         marginRight: 130,
+         marginBottom: 25
+      },
+      title: {
+         text: 'Load Average',
+         x: -20 //center
+      },
+      tooltip: {
+         formatter: function() {
+                   return '<b>'+ this.series.name +'</b><br/>'+
+               this.x +': '+ this.y +'Â°C';
+         }
+      },
+      legend: {
+         layout: 'vertical',
+         align: 'right',
+         verticalAlign: 'top',
+         x: -10,
+         y: 100,
+         borderWidth: 0
+      },
+      series: [{
+         name: '5 minute load avg',
+         data: [{x:0,y:0.0}]
+      }]
+   });
+   
+	memory_chart = new Highcharts.Chart({
+		chart: {
+			renderTo: 'memory',
+			plotBackgroundColor: null,
+			plotBorderWidth: null,
+			plotShadow: false
+		},
+		title: {
+			text: 'Current Server Memory'
+		},
+		tooltip: {
+			formatter: function() {
+				return '<b>'+ this.point.name +'</b>: '+ this.percentage +' %';
+			}
+		},
+		plotOptions: {
+			pie: {
+				allowPointSelect: true,
+				cursor: 'pointer',
+				dataLabels: {
+					enabled: true,
+					color: Highcharts.theme.textColor || '#000000',
+					connectorColor: Highcharts.theme.textColor || '#000000',
+					formatter: function() {
+						return '<b>'+ this.point.name +'</b>: '+ this.percentage +' %';
+					}
+				}
+			}
+		},
+		series: [{
+			type: 'pie',
+			name: 'Memory',
+			data: [
+				['Total Memory',100.0]
+			]
+		}]
+	});
+}); 	
+</script>
+
+<script>
+function update_memory_chart(data) {
+	  var gb = data.totalmem/1024/1024/1024;
+	  memory_chart.setTitle({text:gb+"GB Memory"});
+	  var mem_series = memory_chart.series[0];
+	  var free = Math.round(100*(data.freemem/data.totalmem));
+	  var used = Math.round(100 - free);
+	  mem_data = [
+			["Free Memory",free],
+			["Used Memory",used]
+	  ];
+	  mem_series.setData(mem_data);
+}
+function update_load_chart(data) {
+	  var series = load_avg_chart.series[0];
+	  series.addPoint({x:0,y:data.loadavg[1]},true,true);
+}
+</script>
+<script>
 	var socket = io.connect('http://localhost');
+	var points = 0;
    socket.on('REQUEST', function (data) {
 		  console.log(data);
 	     //socket.emit('my other event', { my: 'data' });
@@ -30,6 +142,11 @@
 
   socket.on('SYSTEM_INFO', function (data) {
 		  console.log(data);
+		  points++;
+		  var hostname = data.hostname;
+		  $('#hostname').html(hostname);
+		  update_memory_chart(data);
+		  update_load_chart(data);
    });
 
 </script>
