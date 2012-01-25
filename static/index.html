@@ -3,32 +3,47 @@
 <head>
 <style>
 
+h1{
+	height:10%;
+}
+
+.charts {
+	width:100%;
+	height:40%;
+}
+
 div#memory {
 	width:50%;
-	height:50%;
+	height:100%;
 	float:left;
 }
 div#load_avg {
 	width:50%;
-	height:50%;
+	height:100%;
 	float:left;
 }
 
+div#response {
+	height:10%;
+	display:block;
+}
+#response span#response_time {
+	font-size: 20px;
+}
 
 </style>
 </head>
 
 <body>
 	<h1 id="hostname"> </h1>
-	<!--
-	<ul id="servers">
-		<li>Loading...</li>
-	</ul>
-	-->
 	<div id="main">
-		<div id="memory"></div>
-		<div id="load_avg"></div>
-		<div>Chart C</div>
+		<div class="charts">
+			<div id="memory"></div>
+			<div id="load_avg"></div>
+		</div>
+		<div id="response">
+			<b>Last Response Time:</b> <span id="response_time"> -- </span>
+		</div>
 	</div>
 </body>
 
@@ -51,26 +66,30 @@ load_avg_chart = new Highcharts.Chart({
          marginBottom: 25
       },
       title: {
-         text: 'Load Average',
-         x: -20 //center
+         text: 'Load Average'
       },
+		xAxis: {
+			type: 'linear',
+			tickPixelInterval:70
+		},
+		yAxis: {
+			plotLines: [{
+				value: 0,
+				width: 1
+			}]
+		},
       tooltip: {
          formatter: function() {
                    return '<b>'+ this.series.name +'</b><br/>'+
-               this.x +': '+ this.y +'Â°C';
+               this.x +': '+ this.y;
          }
       },
       legend: {
-         layout: 'vertical',
-         align: 'right',
-         verticalAlign: 'top',
-         x: -10,
-         y: 100,
-         borderWidth: 0
+         enabled:false
       },
       series: [{
          name: '5 minute load avg',
-         data: [{x:0,y:0.0}]
+         data: [{x:0,y:0.0},{x:0,y:0.0},{x:0,y:0.0},{x:0,y:0.0},{x:0,y:0.0},{x:0,y:0.0}]
       }]
    });
    
@@ -129,7 +148,7 @@ function update_memory_chart(data) {
 }
 function update_load_chart(data) {
 	  var series = load_avg_chart.series[0];
-	  series.addPoint({x:0,y:data.loadavg[1]},true,true);
+	  series.addPoint({x:points,y:data.loadavg[1]},true,true);
 }
 </script>
 <script>
@@ -138,11 +157,23 @@ function update_load_chart(data) {
    socket.on('REQUEST', function (data) {
 		  console.log(data);
 	     //socket.emit('my other event', { my: 'data' });
+		  var t = data.response_time;
+		  var color;
+		  if(t < 200) {
+		 		color = 'green'; 
+		  } else if(t>=200 && t<=500) {
+		 		color = 'yellow'; 
+		  } else {
+		 		color = 'red'; 
+		  }
+
+		  $('#response_time').html(data.response_time+' ms').css({color:color});
    });
 
   socket.on('SYSTEM_INFO', function (data) {
 		  console.log(data);
 		  points++;
+		  console.log(points);
 		  var hostname = data.hostname;
 		  $('#hostname').html(hostname);
 		  update_memory_chart(data);
