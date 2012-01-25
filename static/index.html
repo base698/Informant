@@ -8,7 +8,7 @@ h1{
 }
 
 .section {
-	width:100%;
+	width:99%;
 	height:40%;
 }
 
@@ -30,14 +30,29 @@ div#cpu {
 
 div#response {
 	width:50%;
-	display:block;
 	float:left;
 }
+
+div#response #table {
+	padding: 10px;
+	display:block;
+	width: 100%;
+	height: 100%;
+	overflow-y: scroll;
+}
+
 #response span#response_time {
 	font-size: 20px;
 }
 
+.point_hand {
+	cursor:pointer;
+	cursor:hand;
+
+}
+
 </style>
+<title>System Status</title>
 </head>
 
 <body>
@@ -47,14 +62,36 @@ div#response {
 			<div id="memory"></div>
 			<div id="load_avg"></div>
 		</div>
-		<div class="seciton">
+		<div class="section">
 			<div id="cpu"></div>
 			<div id="response">
 				<b>Last Response Time:</b> <span id="response_time"> -- </span>
+				<div id="table"></div>
 			</div>
 	</div>
 </body>
 
+<script id="request_template" type="text/template">
+	<table>
+		<tr>
+			<th>Recorded At</th>
+			<th>Client IP</th>
+			<th class="point_hand" id="url">URL</th>
+			<th class="point_hand" id="status_code">Status</th>
+			<th class="point_hand" id="response">Response Time</th>
+		</tr>
+		<% for(var i=0;i<requests.length;i++) { %>
+		<% var req = requests[i]; %>
+			<tr>
+				<td><%=req.measured_at%></td>
+				<td><%=req.client_ip%></td>
+				<td><%=req.url%></td>
+				<td><%=req.status_code%></td>
+				<td style="color:<%=color(req.response_time)%>"><%=req.response_time%> ms</td>
+			</tr>
+		<% } %>
+	</table>
+</script>
 <script src="/underscore-min.js"></script>
 <script src="/jquery-1.7.1.min.js"></script>
 <script src="/highcharts.js"></script>
@@ -64,7 +101,6 @@ div#response {
 </script>
 <script>
 
-$(document).ready(function() {
 cpu_chart_options = {
       chart: {
          renderTo: 'cpu',
@@ -201,11 +237,8 @@ memory_chart_options = {
 			]
 		}]
 	};
-}); 	
 
-</script>
-
-<script>
+$(document).ready(function() {
 
 var mem_chart = null;
 function update_memory_chart(data) {
@@ -237,7 +270,6 @@ function update_load_chart(data) {
 					item.data.push({x:start.getTime()+i*1000,y:1});
 				}
 			});
-			console.log(opt_series);
 			load_avg_chart = new Highcharts.Chart(load_avg_chart_options);
 	  }
 
@@ -290,36 +322,116 @@ function update_cpu_chart(data) {
 	series[2].addPoint({x:measured_at,y:idle},true,true);
 	
 }
-</script>
-<script>
-	var socket = io.connect('http://localhost');
-	var points = 0;
-   socket.on('REQUEST', function (data) {
-		  console.log(data);
-	     //socket.emit('my other event', { my: 'data' });
-		  var t = data.response_time;
-		  var color;
-		  if(t < 200) {
-		 		color = 'green'; 
-		  } else if(t>=200 && t<=500) {
-		 		color = 'yellow'; 
-		  } else {
-		 		color = 'red'; 
-		  }
 
-		  $('#response_time').html(data.response_time+' ms').css({color:color});
-   });
+function get_color_from_response(t) {
+	var color;
+	if(t < 200) {
+	 		color = 'green'; 
+	} else if(t>=200 && t<=500) {
+		color = 'yellow'; 
+	} else {
+		color = 'red'; 
+	}
+	return color;
+}
 
-  socket.on('SYSTEM_INFO', function (data) {
-		  console.log(data);
-		  points++;
-		  var hostname = data.hostname;
-		  $('#hostname').html(hostname);
-		  update_memory_chart(data);
-		  update_load_chart(data);
-		  update_cpu_chart(data);
-   });
+var requests = [];
+var sized = false;
+var sorted = null;
 
+function update_request_data(data) {
+	console.log(data);
+	requests.push(data);
+	var t = data.response_time;
+	var color = get_color_from_response(t);
+	$('#response_time').html(data.response_time+' ms').css({color:color});
+	if(requests.length>200) requests.shift();
+	
+	redraw_requests();
+
+}
+
+/* This is SOOOO efficient... not */
+function redraw_requests() {
+	var template = $('#request_template').html(); 
+
+	var items;
+	if(current_sort != null) {
+		items = _.clone(requests);
+		// XXX sort
+		items.sort(current_sort);
+	} else {
+		items = requests;
+	}
+
+	var html = _.template(template,{requests:items,color:get_color_from_response});
+	// redraw
+	$('#response #table').html(html);
+	
+	// Set to size of section
+	$('#response #table').css({height:($('#cpu').height()-30)+'px'});
+
+}
+
+// TODO: add disconnect (server going down);
+var socket = io.connect(window.location.href);
+var points = 0;
+
+// For testing
+fake_requests = function() {
+	var img = new Image();
+	img.src = 'http://localhost:8080/yo';
+}
+setInterval(fake_requests,1000);
+
+socket.on('REQUEST', update_request_data);
+socket.on('SYSTEM_INFO', function (data) {
+  points++;
+  var hostname = data.hostname;
+  $('head title').html(hostname);
+  $('#hostname').html(hostname);
+  update_memory_chart(data);
+  update_load_chart(data);
+  update_cpu_chart(data);
+});
+
+var sort = {
+	URL: function(a,b) {
+		return a.url.localeCompare(b.url);
+	},
+	STATUS: function(a,b) {
+		return b.status_code - a.status_code;
+	}, 
+	RESPONSE: function(a,b) {
+		return b.response_time - a.response_time;
+	}
+};
+
+var current_sort;
+$(document).on('click','#url',function(e) {
+	current_sort = sort['URL'];
+	redraw_requests();
+});
+
+$(document).on('click','#status_code',function(e) {
+	current_sort = sort['STATUS'];
+	redraw_requests();
+});
+
+$(document).on('click','#response',function(e) {
+	current_sort = sort['RESPONSE'];
+	redraw_requests();
+});
+
+$(document).on('keydown',function(e) {
+	if(e.keyCode == 27 ) {
+		current_sort = null;
+	}
+
+	redraw_requests();
+});
+
+}); 
 </script>
 
 </html>
