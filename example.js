@@ -3,8 +3,7 @@
 var express = require('express');
 var app = express.createServer();
 var informant = require('./');
-var store = new informant.MemStore();
-//var store = new informant.MongoStore();
+var store = new informant.MongoStore();
 app.use(informant.middleware());
 
 app.get('/',function(req,res) {

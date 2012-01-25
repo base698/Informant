@@ -10,7 +10,7 @@ Informant is a lightweight way to monitor server resources in real-time.  It can
 
 ## Viewing the realtime interface:
    Navigate to http://<server>:2222/
-	![Screenshot](/path/to/img.jpg)
+	![Screenshot](https://github.com/base698/Informant/raw/master/static/screenshot.png)
 
 ## How to Install
 
