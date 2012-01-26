@@ -3,6 +3,12 @@
 <head>
 <style>
 
+html {
+	position: fixed;
+	width: 100%;
+	height:100%;
+}
+
 h1{
 	height:10%;
 }
@@ -10,6 +16,8 @@ h1{
 .section {
 	width:99%;
 	height:40%;
+	position: relative;
+	display:block;
 }
 
 div#memory {
@@ -51,6 +59,79 @@ div#response #table {
 
 }
 
+div#main {
+	position:absolute;
+	width: 100%;
+	height: 100%;
+}
+
+#main .selector {
+	background: #eee;
+	color: #333;
+	font-size: 20px;
+	padding: 5px;
+	border-radius: 8px;
+	position:absolute;
+	top:-5%;
+	right:5%;
+	margin: 10px 10px 0 0;
+	cursor: pointer;
+	cursor: hand;
+	z-index: 10000;
+}
+
+#hosts h3 {
+	font-size: 24px;
+	color: #ddd;
+	text-align: center;
+	text-shadow: 0.1em 0.1em #955;
+}
+
+#hosts {
+	margin: 0 auto;
+	border-radius: 10px;
+	width: 100%;
+	height: 100%;
+
+}
+
+#hosts ul {
+	margin: 0 auto;
+	width: 100%;
+	height: 100%;
+}
+
+#hosts ul li {
+	width: 145px;
+	height: 75px;
+	padding: 10px;
+	margin: 30px;
+	font-size: 16px;
+	float: left;
+	list-style-type:none;
+	color: #eee;
+	border: solid 2px #ccc;
+	border-radius: 5px;
+	cursor: pointer;
+	cursor: hand;
+
+}
+
+#hosts ul li:hover {
+	box-shadow: inset #4e4 0px 0px 8px;	
+	text-shadow: 0.1em 0.1em #3dd;
+}
+
+.modal {
+	top: 0;
+	left: 0;
+	background: rgba(0,0,0,0.7);
+	width:100%;
+	height:100%;
+	z-index:10000;
+	position:absolute;	
+}
+
 </style>
 <title>System Status</title>
 </head>
@@ -58,6 +139,9 @@ div#response #table {
 <body>
 	<h1 id="hostname"> </h1>
 	<div id="main">
+		<div class="selector">
+			Hostname
+		</div>
 		<div class="section">
 			<div id="memory"></div>
 			<div id="load_avg"></div>
@@ -70,6 +154,26 @@ div#response #table {
 			</div>
 	</div>
 </body>
+
+<script id="host_template" type="text/template">
+	<li id="<%=_id%>">
+		<span class="hostname"><%=hostname%></span>	
+		<span class="type"><%=server_name%></span>
+	</li>
+</script>
+
+<script id="host_select_template" type="text/template">
+	<div class="modal">
+		<div id="hosts">
+			<h3>Select Your Host.</h3>
+			<ul>
+				<li class="hostname" id="all">
+					<span class="hostname">All Hosts</span>	
+				</li>
+			</ul>
+		</div>
+	</div>
+</script>
 
 <script id="request_template" type="text/template">
 	<table>
@@ -240,6 +344,13 @@ memory_chart_options = {
 
 $(document).ready(function() {
 
+function reset_charts() {
+	mem_chart = null;
+	load_avg_chart = null;
+	cpu_chart = null;
+	requests = [];
+}
+
 var mem_chart = null;
 function update_memory_chart(data) {
 	  var gb = data.totalmem/1024/1024/1024;
@@ -252,6 +363,7 @@ function update_memory_chart(data) {
 			["Used Memory",used]
 	  ];
 	  if(!mem_chart) {
+	  		console.log('new mem');
 	  		mem_series.data = mem_data;
 			mem_chart = new Highcharts.Chart(memory_chart_options);
 	  }
@@ -266,6 +378,7 @@ function update_load_chart(data) {
 			var opt_series = load_avg_chart_options.series;
 			var start = new Date();
 			_.each(opt_series,function(item,idx) {
+				item.data = [];
 				for(var i = 0;i<10;i++) {
 					item.data.push({x:start.getTime()+i*1000,y:1});
 				}
@@ -307,6 +420,7 @@ function update_cpu_chart(data) {
 		var start = new Date(data.measured_at);
 		var opt_series = cpu_chart_options.series;
 		_.each(opt_series,function(item,idx) {
+			item.data = [];
 			for(var i = 0;i<10;i++) {
 				item.data.push({x:start.getTime()+i*1000,y:100});
 			}
@@ -340,7 +454,12 @@ var sized = false;
 var sorted = null;
 
 function update_request_data(data) {
-	console.log(data);
+
+ 	if(data.hostname != filter) {
+  		console.log('returning');
+		return;
+  	}
+
 	requests.push(data);
 	var t = data.response_time;
 	var color = get_color_from_response(t);
@@ -386,13 +505,31 @@ if(window.location.href.indexOf('fake_data')>=0) {
 	setInterval(fake_requests,1000);
 }
 
+var hostname = "Unknown";
+var filter = "";
+
+function update_hostname(new_hostname) {
+	$('head title').html(new_hostname);
+   $('#hostname').html(new_hostname);
+  	$('#main .selector').html(new_hostname); 
+	filter = new_hostname;
+	hostname = new_hostname;
+}
+
 
 socket.on('REQUEST', update_request_data);
 socket.on('SYSTEM_INFO', function (data) {
   points++;
-  var hostname = data.hostname;
-  $('head title').html(hostname);
-  $('#hostname').html(hostname);
+
+  if(hostname === 'Unknown') {
+  	 update_hostname(data.hostname);
+  }
+
+  if(data.hostname != filter) {
+  		console.log('returning');
+		return;
+  }
+
   update_memory_chart(data);
   update_load_chart(data);
   update_cpu_chart(data);
@@ -432,6 +569,62 @@ $(document).on('keydown',function(e) {
 	}
 
 	redraw_requests();
+});
+
+function close_modal() {
+	$('.modal').remove();
+	$(document).off('keyup',keyup_modal);
+	$(document).off('click','#hosts ul li',select_host);
+}
+
+function keyup_modal(e) {
+	if(e.keyCode == 27 ) {
+		close_modal();
+	}
+}
+
+function select_host(e) {
+	console.log(e);
+	var id = $(e.currentTarget).attr('id');
+	var new_hostname = $(e.currentTarget).find('.hostname').html();
+
+	if(new_hostname != hostname) {
+		update_hostname(new_hostname);
+		reset_charts();
+	} 	
+
+	close_modal();
+}
+
+$(document).on('click','#main .selector',function(e) {
+	// TODO: implement
+	var template = $('#host_select_template').html();
+	var host_template = $('#host_template').html();
+
+	$('body').append(template);
+
+	$(document).on('keyup',keyup_modal);
+	$(document).on('click','#hosts ul li',select_host);
+	
+	// get data
+	$.ajax({
+		url:'/servers',
+		success: function(response) {
+			for(var i in response) {
+				var item = response[i];
+				var host_html = _.template(host_template,item);
+				$('#hosts ul').append(host_html);	
+				
+			}
+		},
+		failure: function() {
+			alert('Failure loading servers.  I blame myself.');
+			close_modal();
+		}
+	});
+
+	// XXX reconfigure socket.io on select
+	
 });
 
 }); 
