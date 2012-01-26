@@ -75,7 +75,7 @@ div#main {
 	padding: 5px;
 	border-radius: 8px;
 	position:absolute;
-	top:-5%;
+	top:-70px;
 	right:5%;
 	margin: 10px 10px 0 0;
 	cursor: pointer;
@@ -158,17 +158,23 @@ div#main {
 			Hostname
 		</div>
 		<div class="section">
-			<div id="memory"></div>
-			<div id="load_avg"></div>
+			<div class="pane" id="memory"></div>
+			<div class="pane" id="load_avg"></div>
 		</div>
 		<div class="section">
-			<div id="cpu"></div>
+			<div class="pane" id="cpu"></div>
 			<div id="response">
 				<b>Last Response Time:</b> <span id="response_time"> -- </span>
-				<div id="table"></div>
+				<div class="pane" id="table"></div>
 			</div>
 	</div>
 </body>
+
+<script id="loading_template" type="text/template">
+	<div class="modal">
+		<h1 class="loading">Loading....</h1>
+	</div>
+</script>
 
 <script id="host_template" type="text/template">
 	<li id="<%=_id%>">
@@ -356,14 +362,43 @@ memory_chart_options = {
 
 $(document).ready(function() {
 
-function reset_charts() {
+var sorted = null;
+var requests = [];
+var sized = false;
+var mem_chart = null;
+var load_avg_chart = null;
+var cpu_chart = null;
+var socket = io.connect(window.location.href);
+var hostname = "Unknown";
+var seen = {};
+var seen_queue = [];
+var sort = {
+	URL: function(a,b) {
+		return a.url.localeCompare(b.url);
+	},
+	STATUS: function(a,b) {
+		return b.status_code - a.status_code;
+	}, 
+	RESPONSE: function(a,b) {
+		return b.response_time - a.response_time;
+	}
+};
+
+var current_sort;
+
+function reload_ui() {
+	seen = {};	
+	seen_queue = [];
 	mem_chart = null;
 	load_avg_chart = null;
 	cpu_chart = null;
 	requests = [];
+	redraw_requests();
+
+	// TODO: Do loading screen?
+	$('.pane').html('Waiting for new data...');
 }
 
-var mem_chart = null;
 function update_memory_chart(data) {
 	  var gb = data.totalmem/1024/1024/1024;
 	  memory_chart_options.title = {text:gb+"GB Memory"};
@@ -382,7 +417,6 @@ function update_memory_chart(data) {
 }
 
 
-var load_avg_chart = null;
 function update_load_chart(data) {
 
 	  if(!load_avg_chart) {
@@ -405,7 +439,6 @@ function update_load_chart(data) {
 }
 
 
-var cpu_chart = null;
 function update_cpu_chart(data) {
 	var cpus = data.cpus;
 	var xAxis = cpu_chart_options.xAxis;
@@ -460,9 +493,6 @@ function get_color_from_response(t) {
 	return color;
 }
 
-var requests = [];
-var sized = false;
-var sorted = null;
 
 /* This is SOOOO efficient... not */
 function redraw_requests() {
@@ -485,9 +515,6 @@ function redraw_requests() {
 
 }
 
-// add disconnect (server going down);
-var socket = io.connect(window.location.href);
-
 // For testing
 fake_requests = function() {
 	var img = new Image();
@@ -497,8 +524,6 @@ if(window.location.href.indexOf('fake_data')>=0) {
 	setInterval(fake_requests,1000);
 }
 
-var hostname = "Unknown";
-
 function update_hostname(new_hostname) {
 	$('head title').html(new_hostname);
    $('#hostname').html(new_hostname);
@@ -506,32 +531,28 @@ function update_hostname(new_hostname) {
 	hostname = new_hostname;
 }
 
-
-var seen = {};
-var seen_queue = [];
 function update_request(data) {
 	if(seen[data._id]) {
 		console.log('ignoring');
 		return;
 	}
 
-	// TODO: make prettier on load
 	if(data.type=="SYSTEM_INFO") {
 	  	update_memory_chart(data);
  	 	update_load_chart(data);
   		update_cpu_chart(data);
 	} else {
-		requests.push(data);
+		requests.unshift(data);
 		var t = data.response_time;
 		var color = get_color_from_response(t);
 		$('#response_time').html(data.response_time+' ms').css({color:color});
-		if(requests.length>200) requests.shift();
+		if(requests.length>200) requests.pop();
 		redraw_requests();
 	}
 
 	// ignore data we've seen
 	seen[data._id] = 1;
-	seen_queue.push[data._id];
+	seen_queue.push(data._id);
 
 	if(seen_queue.length>300) {
 		var to_remove = seen_queue.shift();
@@ -540,25 +561,13 @@ function update_request(data) {
 }
 
 socket.on('NEW_CLIENT',function(data) {
+	// TODO: socket.removeListener('NEW_CLIENT');
 	update_hostname(data.hostname);
 	update_request(data.rec);
 	$('.modal').remove();
 	socket.on(data.hostname,update_request);
 });
 
-var sort = {
-	URL: function(a,b) {
-		return a.url.localeCompare(b.url);
-	},
-	STATUS: function(a,b) {
-		return b.status_code - a.status_code;
-	}, 
-	RESPONSE: function(a,b) {
-		return b.response_time - a.response_time;
-	}
-};
-
-var current_sort;
 $(document).on('click','#url',function(e) {
 	current_sort = sort['URL'];
 	redraw_requests();
@@ -603,7 +612,7 @@ function select_host(e) {
 		socket.removeListener(hostname,update_request);
 		stest = socket;
 		update_hostname(new_hostname);
-		reset_charts();
+		reload_ui();
 		socket.on(new_hostname,update_request);
 	} 	
 	
