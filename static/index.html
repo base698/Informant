@@ -375,7 +375,6 @@ function update_memory_chart(data) {
 			["Used Memory",used]
 	  ];
 	  if(!mem_chart) {
-	  		console.log('new mem');
 	  		mem_series.data = mem_data;
 			mem_chart = new Highcharts.Chart(memory_chart_options);
 	  }
@@ -472,7 +471,6 @@ function redraw_requests() {
 	var items;
 	if(current_sort != null) {
 		items = _.clone(requests);
-		// XXX sort
 		items.sort(current_sort);
 	} else {
 		items = requests;
@@ -508,8 +506,16 @@ function update_hostname(new_hostname) {
 	hostname = new_hostname;
 }
 
-function update_request(data) {
 
+var seen = {};
+var seen_queue = [];
+function update_request(data) {
+	if(seen[data._id]) {
+		console.log('ignoring');
+		return;
+	}
+
+	// TODO: make prettier on load
 	if(data.type=="SYSTEM_INFO") {
 	  	update_memory_chart(data);
  	 	update_load_chart(data);
@@ -523,6 +529,14 @@ function update_request(data) {
 		redraw_requests();
 	}
 
+	// ignore data we've seen
+	seen[data._id] = 1;
+	seen_queue.push[data._id];
+
+	if(seen_queue.length>300) {
+		var to_remove = seen_queue.shift();
+		delete seen[to_remove];
+	}
 }
 
 socket.on('NEW_CLIENT',function(data) {
@@ -622,8 +636,6 @@ $(document).on('click','#main .selector',function(e) {
 		}
 	});
 
-	// XXX reconfigure socket.io on select
-	
 });
 
 }); 
