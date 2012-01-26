@@ -59,6 +59,9 @@ div#response #table {
 
 }
 
+span.hostname {
+}
+
 div#main {
 	position:absolute;
 	width: 100%;
@@ -114,6 +117,8 @@ div#main {
 	border-radius: 5px;
 	cursor: pointer;
 	cursor: hand;
+	overflow: hidden;
+	text-overflow:ellipsis;
 
 }
 
@@ -463,23 +468,6 @@ var requests = [];
 var sized = false;
 var sorted = null;
 
-function update_request_data(data) {
-
- 	if(data.hostname != filter) {
-  		console.log('returning');
-		return;
-  	}
-
-	requests.push(data);
-	var t = data.response_time;
-	var color = get_color_from_response(t);
-	$('#response_time').html(data.response_time+' ms').css({color:color});
-	if(requests.length>200) requests.shift();
-	
-	redraw_requests();
-
-}
-
 /* This is SOOOO efficient... not */
 function redraw_requests() {
 	var template = $('#request_template').html(); 
@@ -502,9 +490,8 @@ function redraw_requests() {
 
 }
 
-// TODO: add disconnect (server going down);
+// add disconnect (server going down);
 var socket = io.connect(window.location.href);
-var points = 0;
 
 // For testing
 fake_requests = function() {
@@ -526,25 +513,36 @@ function update_hostname(new_hostname) {
 	hostname = new_hostname;
 }
 
+function update_request(data) {
 
-socket.on('REQUEST', update_request_data);
-socket.on('SYSTEM_INFO', function (data) {
-  points++;
-
-  if(hostname === 'Unknown') {
-  	 update_hostname(data.hostname);
-	 $('.modal').remove();
-  }
-
-  if(data.hostname != filter) {
+ 	if(data.hostname != filter) {
   		console.log('returning');
 		return;
-  }
+  	}
 
-  update_memory_chart(data);
-  update_load_chart(data);
-  update_cpu_chart(data);
+	if(data.type=="SYSTEM_INFO") {
+	  	update_memory_chart(data);
+ 	 	update_load_chart(data);
+  		update_cpu_chart(data);
+	} else {
+		requests.push(data);
+		var t = data.response_time;
+		var color = get_color_from_response(t);
+		$('#response_time').html(data.response_time+' ms').css({color:color});
+		if(requests.length>200) requests.shift();
+		redraw_requests();
+	}
+
+}
+
+socket.on('NEW_CLIENT',function(data) {
+	update_hostname(data.hostname);
+	update_request(data.rec);
+	$('.modal').remove();
 });
+
+socket.on('REQUEST', update_request);
+socket.on('SYSTEM_INFO', update_request);
 
 var sort = {
 	URL: function(a,b) {
@@ -594,8 +592,8 @@ function keyup_modal(e) {
 	}
 }
 
+
 function select_host(e) {
-	console.log(e);
 	var id = $(e.currentTarget).attr('id');
 	var new_hostname = $(e.currentTarget).find('.hostname').html();
 
@@ -603,12 +601,11 @@ function select_host(e) {
 		update_hostname(new_hostname);
 		reset_charts();
 	} 	
-
+	
 	close_modal();
 }
 
 $(document).on('click','#main .selector',function(e) {
-	// TODO: implement
 	var template = $('#host_select_template').html();
 	var host_template = $('#host_template').html();
 
