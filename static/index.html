@@ -182,9 +182,6 @@ div#main {
 		<div id="hosts">
 			<h3>Select Your Host.</h3>
 			<ul>
-				<li class="hostname" id="all">
-					<span class="hostname">All Hosts</span>	
-				</li>
 			</ul>
 		</div>
 	</div>
@@ -503,22 +500,15 @@ if(window.location.href.indexOf('fake_data')>=0) {
 }
 
 var hostname = "Unknown";
-var filter = "";
 
 function update_hostname(new_hostname) {
 	$('head title').html(new_hostname);
    $('#hostname').html(new_hostname);
   	$('#main .selector').html(new_hostname); 
-	filter = new_hostname;
 	hostname = new_hostname;
 }
 
 function update_request(data) {
-
- 	if(data.hostname != filter) {
-  		console.log('returning');
-		return;
-  	}
 
 	if(data.type=="SYSTEM_INFO") {
 	  	update_memory_chart(data);
@@ -539,10 +529,8 @@ socket.on('NEW_CLIENT',function(data) {
 	update_hostname(data.hostname);
 	update_request(data.rec);
 	$('.modal').remove();
+	socket.on(data.hostname,update_request);
 });
-
-socket.on('REQUEST', update_request);
-socket.on('SYSTEM_INFO', update_request);
 
 var sort = {
 	URL: function(a,b) {
@@ -598,8 +586,11 @@ function select_host(e) {
 	var new_hostname = $(e.currentTarget).find('.hostname').html();
 
 	if(new_hostname != hostname) {
+		socket.removeListener(hostname,update_request);
+		stest = socket;
 		update_hostname(new_hostname);
 		reset_charts();
+		socket.on(new_hostname,update_request);
 	} 	
 	
 	close_modal();
