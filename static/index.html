@@ -20,6 +20,15 @@ h1{
 	display:block;
 }
 
+.section.bottom {
+	border-top: 1px solid #888;
+}
+
+.section .right {
+
+	border-left: 1px solid #888;
+}
+
 div#memory {
 	width:50%;
 	height:100%;
@@ -39,6 +48,12 @@ div#cpu {
 div#response {
 	width:50%;
 	float:left;
+	padding-top: 10px;
+	height: 100%;
+}
+
+div#response p {
+	margin: 5px 0 -5px 14px;
 }
 
 div#response #table {
@@ -144,6 +159,85 @@ div#main {
 	margin-top: 20%;
 }
 
+div#response table {
+	font-family:Arial;
+	font-size: 18px;
+	font-style: normal;
+	font-weight: normal;
+	text-transform: uppercase;
+   letter-spacing: -1px;
+   line-height: 1.7em;
+	text-align:center;
+	border-collapse:collapse;
+
+}
+
+div#response table thead th {
+ 	padding:6px 10px;
+   text-transform:uppercase;
+	color:#444;
+	font-weight:bold;
+   text-shadow:1px 1px 1px #fff;
+	border-bottom:5px solid #444;
+	background-color:#444;
+   color:#444;
+   border-bottom:1px solid #444;
+	background:-webkit-gradient(
+        linear,
+        left bottom,
+        left top,
+        color-stop(0.39, rgb(189,189,189)),
+        color-stop(0.7, rgb(224,224,224))
+        );
+   background:-moz-linear-gradient(
+        center bottom,
+        rgb(189,189,189) 39%,
+        rgb(224,224,224) 70%
+        );
+
+}
+
+div#response table td {
+	padding: 5px;
+}
+
+div#response table tbody tr:nth-child(even) {
+	 background-color:#444;
+    color:#444;
+    border-bottom:1px solid #444;
+	 background:-webkit-gradient(
+        linear,
+        left bottom,
+        left top,
+        color-stop(0.39, rgb(189,189,189)),
+        color-stop(0.7, rgb(224,224,224))
+        );
+    background:-moz-linear-gradient(
+        center bottom,
+        rgb(189,189,189) 39%,
+        rgb(224,224,224) 70%
+        );
+}
+
+div#response table tbody tr:nth-child(odd) {
+	 background-color:#555;
+    color:#f0f0f0;
+    border-bottom:1px solid #444;
+    background:-webkit-gradient(
+        linear,
+        left bottom,
+        left top,
+        color-stop(0.39, rgb(85,85,85)),
+        color-stop(0.7, rgb(105,105,105))
+        );
+    background:-moz-linear-gradient(
+        center bottom,
+        rgb(85,85,85) 39%,
+        rgb(105,105,105) 70%
+        );
+    text-shadow:1px 1px 1px #000;
+}
+
 </style>
 <title>System Status</title>
 </head>
@@ -157,14 +251,14 @@ div#main {
 		<div class="selector">
 			Hostname
 		</div>
-		<div class="section">
-			<div class="pane" id="memory"></div>
-			<div class="pane" id="load_avg"></div>
+		<div class="section top">
+			<div class="pane left" id="memory"></div>
+			<div class="pane right" id="load_avg"></div>
 		</div>
-		<div class="section">
-			<div class="pane" id="cpu"></div>
-			<div id="response">
-				<b>Last Response Time:</b> <span id="response_time"> -- </span>
+		<div class="section bottom">
+			<div class="pane left" id="cpu"></div>
+			<div id="response" class="right">
+				<p><b>Last Response Time:</b> <span id="response_time"> -- </span></p>
 				<div class="pane" id="table"></div>
 			</div>
 	</div>
@@ -195,6 +289,7 @@ div#main {
 
 <script id="request_template" type="text/template">
 	<table>
+		<thead>
 		<tr>
 			<th>Recorded At</th>
 			<th>Client IP</th>
@@ -202,18 +297,22 @@ div#main {
 			<th class="point_hand" id="status_code">Status</th>
 			<th class="point_hand" id="response">Response Time</th>
 		</tr>
+		</thead>
+		<tbody>
 		<% for(var i=0;i<requests.length;i++) { %>
 		<% var req = requests[i]; %>
 			<tr>
-				<td><%=req.measured_at%></td>
+				<td><%=new Date(req.measured_at).format()%></td>
 				<td><%=req.client_ip%></td>
 				<td><%=req.url%></td>
 				<td><%=req.status_code%></td>
 				<td style="color:<%=color(req.response_time)%>"><%=req.response_time%> ms</td>
 			</tr>
 		<% } %>
+		</tbody>
 	</table>
 </script>
+<script src="/date.format.js"></script>
 <script src="/underscore-min.js"></script>
 <script src="/jquery-1.7.1.min.js"></script>
 <script src="/highcharts.js"></script>
@@ -416,6 +515,12 @@ function update_memory_chart(data) {
 	  mem_chart.series[0].setData(mem_data);
 }
 
+function local_time(date_str) {
+	var utc = new Date(date_str);
+	var local = new Date();
+	local.setTime(utc.getTime());
+	return local;
+}
 
 function update_load_chart(data) {
 
@@ -425,13 +530,14 @@ function update_load_chart(data) {
 			_.each(opt_series,function(item,idx) {
 				item.data = [];
 				for(var i = 0;i<10;i++) {
-					item.data.push({x:start.getTime()+i*1000,y:1});
+					item.data.push({x:start.getTime()+i*10,y:1});
 				}
 			});
 			load_avg_chart = new Highcharts.Chart(load_avg_chart_options);
 	  }
 
 	  var series = load_avg_chart.series;
+
 	  var measured_at = new Date(data.measured_at).getTime();
 	  series[0].addPoint({x:measured_at,y:data.loadavg[0]},false,true);
 	  series[1].addPoint({x:measured_at,y:data.loadavg[1]},false,true);
@@ -466,7 +572,7 @@ function update_cpu_chart(data) {
 		_.each(opt_series,function(item,idx) {
 			item.data = [];
 			for(var i = 0;i<10;i++) {
-				item.data.push({x:start.getTime()+i*1000,y:100});
+				item.data.push({x:start.getTime()+i*10,y:100});
 			}
 		});
 		cpu_chart = new Highcharts.Chart(cpu_chart_options);
@@ -484,7 +590,7 @@ function update_cpu_chart(data) {
 function get_color_from_response(t) {
 	var color;
 	if(t < 200) {
-	 		color = 'green'; 
+	 		color = '#22CC22'; 
 	} else if(t>=200 && t<=500) {
 		color = 'yellow'; 
 	} else {
@@ -632,8 +738,15 @@ $(document).on('click','#main .selector',function(e) {
 	$.ajax({
 		url:'/servers',
 		success: function(response) {
+			if(response.error) {
+				alert('Servers did not load.');
+				close_modal();
+				return;
+			}
+
 			for(var i in response) {
 				var item = response[i];
+				item._id = (item._id)?item._id:-1;
 				var host_html = _.template(host_template,item);
 				$('#hosts ul').append(host_html);	
 				
