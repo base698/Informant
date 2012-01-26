@@ -77,7 +77,7 @@ div#main {
 	margin: 10px 10px 0 0;
 	cursor: pointer;
 	cursor: hand;
-	z-index: 10000;
+	z-index: 9999;
 }
 
 #hosts h3 {
@@ -132,11 +132,21 @@ div#main {
 	position:absolute;	
 }
 
+.modal h1.loading {
+	font-size: 32px;
+	color: #eee;
+	text-align: center;
+	margin-top: 20%;
+}
+
 </style>
 <title>System Status</title>
 </head>
 
 <body>
+	<div class="modal">
+		<h1 class="loading">Loading....</h1>
+	</div>
 	<h1 id="hostname"> </h1>
 	<div id="main">
 		<div class="selector">
@@ -523,6 +533,7 @@ socket.on('SYSTEM_INFO', function (data) {
 
   if(hostname === 'Unknown') {
   	 update_hostname(data.hostname);
+	 $('.modal').remove();
   }
 
   if(data.hostname != filter) {
