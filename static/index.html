@@ -74,7 +74,14 @@ div#response #table {
 
 }
 
-span.hostname {
+.scrolly {
+	-webkit-transition: all 3s ease-in-out;
+	-moz-transition: all 3s ease-in-out;
+}
+
+.scrolly:hover {
+	-webkit-transform: translate(-100px); 
+	-moz-kit-transform: translate(-100px); 
 }
 
 div#main {
@@ -120,26 +127,60 @@ div#main {
 }
 
 #hosts ul li {
-	width: 145px;
-	height: 75px;
-	padding: 10px;
-	margin: 30px;
-	font-size: 16px;
-	float: left;
-	list-style-type:none;
-	color: #eee;
-	border: solid 2px #ccc;
-	border-radius: 5px;
+	height: 100px;
+	padding: 20px;
+	font-size: 24px;
+	font-family: helvetica;
+	list-style-type: none;
+	color: #EEE;
+	border-radius: 25px;
 	cursor: pointer;
 	cursor: hand;
 	overflow: hidden;
-	text-overflow:ellipsis;
+	position: absolute;
+	left: 1%;
+	right: 1%;
+	background-color: #555;
+	opacity: 0.9;
+    color:#f0f0f0;
+    border-bottom:1px solid #444;
+    background:-webkit-gradient(
+        linear,
+        left bottom,
+        left top,
+        color-stop(0.39, rgb(85,85,85)),
+        color-stop(0.7, rgb(105,105,105))
+        );
+    background:-moz-linear-gradient(
+        center bottom,
+        rgb(85,85,85) 39%,
+        rgb(105,105,105) 70%
+        );
+    text-shadow:1px 1px 1px #000;
 
 }
 
+#hosts ul li span {
+	text-overflow: hidden;
+	margin:3px;
+	overflow: hidden;
+	font-weight:bold;
+	display: block;
+	text-align:center;
+	
+}
+
+span.hostname {
+	margin-top: 10px;
+}
+
+#hosts ul li span.type {
+	font-size: 18px;
+	color: #ddd;
+}
+
 #hosts ul li:hover {
-	box-shadow: inset #4e4 0px 0px 8px;	
-	text-shadow: 0.1em 0.1em #3dd;
+	box-shadow: inset #FFF 2px 0px 8px;	
 }
 
 .modal {
@@ -161,7 +202,7 @@ div#main {
 
 div#response table {
 	font-family:Arial;
-	font-size: 18px;
+	font-size: 14px;
 	font-style: normal;
 	font-weight: normal;
 	text-transform: uppercase;
@@ -169,7 +210,8 @@ div#response table {
    line-height: 1.7em;
 	text-align:center;
 	border-collapse:collapse;
-
+	width: 102%;
+	margin-left: -10px;
 }
 
 div#response table thead th {
@@ -199,6 +241,17 @@ div#response table thead th {
 
 div#response table td {
 	padding: 5px;
+}
+
+div#response table td.url {
+	width: 100px;
+	overflow-x: scroll;
+
+}
+
+div#response table td.url span {
+	letter-spacing: 0.01em;
+	font-size: 10px;
 }
 
 div#response table tbody tr:nth-child(even) {
@@ -291,7 +344,7 @@ div#response table tbody tr:nth-child(odd) {
 	<table>
 		<thead>
 		<tr>
-			<th>Recorded At</th>
+			<th>Time</th>
 			<th>Client IP</th>
 			<th class="point_hand" id="url">URL</th>
 			<th class="point_hand" id="status_code">Status</th>
@@ -304,7 +357,7 @@ div#response table tbody tr:nth-child(odd) {
 			<tr>
 				<td><%=new Date(req.measured_at).format()%></td>
 				<td><%=req.client_ip%></td>
-				<td><%=req.url%></td>
+				<td class="url"><span><%=req.url%></span></td>
 				<td><%=req.status_code%></td>
 				<td style="color:<%=color(req.response_time)%>"><%=req.response_time%> ms</td>
 			</tr>
@@ -352,9 +405,10 @@ cpu_chart_options = {
       },
       tooltip: {
          formatter: function() {
-            return '<b>'+ this.x +'</b><br/>'+
-                this.series.name +': '+ this.y +'<br/>'+
-                'Total: '+ this.point.stackTotal;
+				var time = new Date();
+				time.setTime(this.x);
+            return '<b>'+ time.format() +'</b><br>'+
+                this.series.name +': '+ (Math.round(this.y*100)/100);
          }
       },
       plotOptions: {
@@ -391,8 +445,10 @@ load_avg_chart_options = {
 		},
       tooltip: {
          formatter: function() {
-                   return '<b>'+ this.series.name +'</b><br/>'+
-               this.x +': '+ this.y;
+				var time = new Date();
+				time.setTime(this.x);
+            return '<b>'+ time.format() +'</b><br>'+
+                this.series.name +': '+ (Math.round(this.y*100)/100);
          }
       },
       legend: {
@@ -602,22 +658,29 @@ function get_color_from_response(t) {
 
 /* This is SOOOO efficient... not */
 function redraw_requests() {
-	var template = $('#request_template').html(); 
+	var draw_requests = function() {
+		var template = $('#request_template').html(); 
 
-	var items;
-	if(current_sort != null) {
-		items = _.clone(requests);
-		items.sort(current_sort);
-	} else {
-		items = requests;
-	}
+		var items;
+		if(current_sort != null) {
+			items = _.clone(requests);
+			items.sort(current_sort);
+		} else {
+			items = requests;
+		}
 
-	var html = _.template(template,{requests:items,color:get_color_from_response});
-	// redraw
-	$('#response #table').html(html);
+		var html = _.template(template,{requests:items,color:get_color_from_response});
+		// redraw
+		$('#response #table').html(html);
 	
-	// Set to size of section
-	$('#response #table').css({height:($('#cpu').height()-30)+'px'});
+		// Set to size of section
+		$('#response #table').css({height:($('#cpu').height()-30)+'px'});
+		requests_timeout = false;
+	}	
+
+	if(!window.requests_timeout) {
+		requests_timeout = setTimeout(draw_requests,1500);	
+	}
 
 }
 
