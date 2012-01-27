@@ -90,19 +90,18 @@ div#main {
 	height: 100%;
 }
 
-#main .selector {
-	background: #eee;
+h1.selector {
+	background: #EEE;
 	color: #333;
-	font-size: 20px;
+	font-size: 22px;
 	padding: 5px;
 	border-radius: 8px;
-	position:absolute;
-	top:-70px;
-	right:5%;
-	margin: 10px 10px 0 0;
+	margin: 10px;
 	cursor: pointer;
 	cursor: hand;
 	z-index: 9999;
+	width: 30%;
+	text-align: center;
 }
 
 #hosts h3 {
@@ -299,11 +298,8 @@ div#response table tbody tr:nth-child(odd) {
 	<div class="modal">
 		<h1 class="loading">Loading....</h1>
 	</div>
-	<h1 id="hostname"> </h1>
+	<h1 class="selector" id="hostname"> </h1>
 	<div id="main">
-		<div class="selector">
-			Hostname
-		</div>
 		<div class="section top">
 			<div class="pane left" id="memory"></div>
 			<div class="pane right" id="load_avg"></div>
@@ -696,7 +692,7 @@ if(window.location.href.indexOf('fake_data')>=0) {
 function update_hostname(new_hostname) {
 	$('head title').html(new_hostname);
    $('#hostname').html(new_hostname);
-  	$('#main .selector').html(new_hostname); 
+  	$('h1.selector').html(new_hostname); 
 	hostname = new_hostname;
 }
 
@@ -788,7 +784,7 @@ function select_host(e) {
 	close_modal();
 }
 
-$(document).on('click','#main .selector',function(e) {
+$(document).on('click','h1.selector',function(e) {
 	var template = $('#host_select_template').html();
 	var host_template = $('#host_template').html();
 
