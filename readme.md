@@ -11,7 +11,7 @@ http://<server where you are running informant>:2222/
 
 ## How to Install
 
-    npm install informant
+    npm install -g informant
 
 ## How to use
 
@@ -33,16 +33,21 @@ app.listen(8080);
 
 If you are using it as a standalone app:
 
-    cd <node_modules where informant installed>
-	 node run
+    informant
+	 
+Alternatively with nohup: 
+
+    nohup informant 2>&1 > informant.log &
 
 ## Environment Variables
 
 Setting these three environment variables effects the operation of informant:
 
-	INFORMANT_PORT         = 2222 # Port the server interface response (default is 2222)
-	INFORMANT_INTERVAL     = 5000 # Sample rate in milliseconds for data (default is 5000)
-	INFORMANT_MEM_STORAGE  = 2000 # Number of items the Memory Store will retain is 2000
+	INFORMANT_PORT         = 2222  # Port the server interface response (default is 2222)
+	INFORMANT_INTERVAL     = 5000  # Sample rate in milliseconds for data (default is 5000)
+	INFORMANT_MEM_STORAGE  = 2000  # Number of items the Memory Store will retain is 2000
+	INFORMANT_DB_HOST      = mydb  # Hostname of the db to run on
+	INFORMANT_DB_PORT      = 27017 # port the db is running on 
 
 ## Store API
 

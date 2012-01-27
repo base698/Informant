@@ -1,20 +1,28 @@
 {
   "name": "informant",
-  "version": "0.3.1",
+  "version": "0.4.0",
+  "preferGlobal": "true",
   "description": "Informer, you know say daddy snow...  ahem A status middleware for your express server",
   "author": ["Justin Thomas <justin.thomas1@gmail.com>"],
   "main":"./lib/informant",
+  "bin": {
+    "informant": "./run.js"
+  },
   "scripts": {
-  	 "start":"node example.js",
+  	 "start":"node run.js",
     "test": "node test/test.js"
   },
   "dependencies": {
 	 "underscore":"1.2.x",
 	 "mongodb": "0.9.x",
-	 "socket.io":"0.8.x"
+	 "socket.io":"0.8.x",
+    "express": ">=2.5.2"
+  },
+  "repository": {
+		"type": "git",
+		"url" : "https://github.com/base698/Informant"
   },
   "devDependencies": {
-    "express": ">=2.5.2"
   },
   "engine": "node 0.6.0"
 }
