@@ -1,6 +1,6 @@
 {
   "name": "informant",
-  "version": "0.3.0",
+  "version": "0.3.1",
   "description": "Informer, you know say daddy snow...  ahem A status middleware for your express server",
   "author": ["Justin Thomas <justin.thomas1@gmail.com>"],
   "main":"./lib/informant",
