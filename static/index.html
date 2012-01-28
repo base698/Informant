@@ -121,6 +121,7 @@ footer div {
 }
 
 footer .progress {
+	width:100%;
 }
 
 footer .middle {
@@ -365,7 +366,7 @@ body {
 	</div>
 	<footer>
 		<div class="left"><input placeholder="Start Date" type="text" id="start"></div>
-		<div class="middle"><div class="progress">middle</div></div>
+		<div class="middle"><div class="progress"></div></div>
 		<div class="right"><input placeholder="End Date" type="text" id="end"></div>
 		</footer>		
 </body>
@@ -597,7 +598,6 @@ $('#start,#end').datepicker();
 $('#start,#end').change(function(e) {
 	//TODO: update charts
 	//TODO: make specific for this query
-	//TODO: make progress bar
 	socket.removeListener('QUERY_RESPONSE');
 	var start_val = $('#start').val();
 	var end_val = $('#end').val();
@@ -608,15 +608,37 @@ $('#start,#end').change(function(e) {
 	if(start.toDateString() == "Invalid Date" || 
 		end.toDateString() == "Invalid Date" ||
 		start.getTime() > end.getTime()) {
-		console.log('err',start,end);
 		return;
 	} else {
 		socket.emit("QUERY",{hostname:hostname,end:end.getTime(),start:start.getTime()});
+		var user_data = [];
+		var count = 0;
+		var total = false;
+
+		socket.on('QUERY_PROGRESS',function(msg) {
+				var progress = Math.round(100*(msg.current/msg.total));
+				$('.progress').progressbar({value:progress});
+		});
+
 		socket.on('QUERY_RESPONSE',function(msg) {
-			console.log(msg);
+
+			// user system idle
 			if(msg.last) {
 				socket.removeListener('QUERY_RESPONSE');
+				var series = cpu_chart.series;
+				series[0].setData(user_data);
+				series[1].setData(user_data);
+				series[2].setData(user_data);
+				cpu_chart.redraw();
+			} else if(msg.__total) {
+				total = msg.__total;
+			} else {
+				var times = msg.cpus[1].times;
+				var pt = {x:msg.measured_at,y:times.user};
+				user_data.push(pt);
+				count++;
 			}
+
 		});
 	}
 });
