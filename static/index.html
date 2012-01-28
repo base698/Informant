@@ -621,7 +621,7 @@ $('#start,#end').change(function(e) {
 		});
 
 		socket.on('QUERY_RESPONSE',function(msg) {
-
+			console.log(msg);
 			// user system idle
 			if(msg.last) {
 				socket.removeListener('QUERY_RESPONSE');
@@ -659,7 +659,7 @@ function reload_ui() {
 }
 
 function update_memory_chart(data) {
-	  var gb = data.totalmem/1024/1024/1024;
+	  var gb = data.totalmem/1024;
 	  memory_chart_options.title = {text:gb+"GB Memory"};
 	  var mem_series = memory_chart_options.series[0];
 	  var free = Math.round(100*(data.freemem/data.totalmem));
@@ -712,6 +712,7 @@ function update_cpu_chart(data) {
 	cpu_chart_options.subtitle = { text: 'Number of CPUs: '+cpus.length };
 
 	var user = 0,system = 0,idle = 0;
+	// TODO: factor out CPUs method to be aggregated on server.
 	_.each(cpus,function(element,idx){
 		xAxis.catagories.push(element.model);	
 		//series.name  /series.data
