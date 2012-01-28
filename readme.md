@@ -59,11 +59,12 @@ Stores conform to this interface:
 	cb = function(err,records) {};
 	var store = {
 		insert: function(record) {},
-		find: function(query,cb) {},
+		find: function(query,limit,cb) {},
 		add_machine: function(record) {},
 		get_machines: function(cb) {}
 	}
 ```
+The limit is the number of records you want to return.  The first record received is the number of records to expect.
 
 The supplied stores are:
 
@@ -98,7 +99,7 @@ var MemStore = function() {
       }
    };
 
-   this.find = function(query,cb) {
+   this.find = function(query,limit,cb) {
       cb(null,this.mem);
    };
 
