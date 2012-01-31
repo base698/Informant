@@ -404,15 +404,12 @@ body {
 			<li><a href="#tabs-3">Requests Chart</a></li>
 		</ul>
 		<div id="tabs-1">
-			<h3>CPU Chart</h3>
 			<div id="a_cpu_chart"></div>
 		</div>
 		<div id="tabs-2">
-			<h3>Load Avg Chart</h3>
 			<div id="a_loadavg_chart"></div>
 		</div>
 		<div id="tabs-3">
-			<h3>Requests Chart</h3>	
 			<div id="a_requests_chart"></div>
 		</div>
 	</div>
@@ -672,6 +669,44 @@ $('#start,#end').change(function(e) {
 
 var archived_dialog_open = false;
 
+var archived_requests_options = {
+      chart: {
+         renderTo: 'a_requests_chart',
+         defaultSeriesType: 'column'
+      },
+      title: {
+         text: 'Time vs Requests'
+      },
+      xAxis: {
+			categories: []
+      },
+      yAxis: {
+			min: 0,
+         title: {
+            text: 'Average Response Time'
+         }
+		},
+      legend: {
+			enabled:false
+		},
+      tooltip: {
+         formatter: function() {
+            return '<b>'+ this.x +'</b><br>'+
+                this.series.name +': '+ (Math.round(this.y*100)/100);
+         }
+      },
+      plotOptions: {
+			column: {
+				pointPadding: 0.2,
+				borderWidth: 0
+			}
+      },
+       series: [{
+         name: 'Requests',
+         data: []
+      }]
+};
+
 function open_archived_dialog(data) {
 	if(!archived_dialog_open) {
 		var template = $('#archived_template').html()
@@ -688,9 +723,20 @@ function open_archived_dialog(data) {
 		archived_dialog_open = true;
 	}
 	
+	var req_data = [];	
+	var categories = [];
 	_.each(data,function(item,idx) {
-		console.log(data);
+		console.log(item);
+		var date = new Date(item.measured_at).format();
+		categories.push(date);
+		req_data.push(item.requests.avg);
 	});
+	categories.reverse();
+	req_data.reverse();
+	archived_requests_options.xAxis.categories = categories;
+	archived_requests_options.series[0].data = req_data;
+	archived_requests_chart = new Highcharts.Chart(archived_requests_options);
+
 	/*
 	a_loadavg_chart
 	a_requests_chart
