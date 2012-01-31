@@ -394,6 +394,32 @@ body {
 	</div>
 </script>
 
+
+<script id="archived_template" type="text/template">
+<div id="archived_dialog" title="Archived Data">
+	<div id="archived_tabs">
+		<ul>
+			<li><a href="#tabs-1">CPU Chart</a></li>
+			<li><a href="#tabs-2">Load Average Chart</a></li>
+			<li><a href="#tabs-3">Requests Chart</a></li>
+		</ul>
+		<div id="tabs-1">
+			<h3>CPU Chart</h3>
+			<div id="a_cpu_chart"></div>
+		</div>
+		<div id="tabs-2">
+			<h3>Load Avg Chart</h3>
+			<div id="a_loadavg_chart"></div>
+		</div>
+		<div id="tabs-3">
+			<h3>Requests Chart</h3>	
+			<div id="a_requests_chart"></div>
+		</div>
+	</div>
+</div>
+
+</script>
+
 <script id="request_template" type="text/template">
 	<table>
 		<thead>
@@ -608,10 +634,11 @@ $('#start,#end').change(function(e) {
 	if(start.toDateString() == "Invalid Date" || 
 		end.toDateString() == "Invalid Date" ||
 		start.getTime() > end.getTime()) {
+		// TODO: update UI 
 		return;
 	} else {
 		socket.emit("QUERY",{hostname:hostname,end:end.getTime(),start:start.getTime()});
-		var user_data = [];
+		var archived_data = [];
 		var count = 0;
 		var total = false;
 
@@ -621,28 +648,56 @@ $('#start,#end').change(function(e) {
 		});
 
 		socket.on('QUERY_RESPONSE',function(msg) {
-			console.log(msg);
+			if(msg == null) {
+				return;
+			}
+
 			// user system idle
-			/*
 			if(msg.last) {
 				socket.removeListener('QUERY_RESPONSE');
-				var series = cpu_chart.series;
-				series[0].setData(user_data);
-				series[1].setData(user_data);
-				series[2].setData(user_data);
-				cpu_chart.redraw();
+				socket.removeListener('QUERY_PROGRESS');
+				$('.progress').progressbar({value:0});
+				open_archived_dialog(archived_data);
 			} else if(msg.__total) {
 				total = msg.__total;
+				archived_data = [];
 			} else {
-				var times = msg.cpus[1].times;
-				var pt = {x:msg.measured_at,y:times.user};
-				user_data.push(pt);
+				archived_data.push(msg);
 				count++;
 			}
-			*/
+			
 		});
 	}
 });
+
+var archived_dialog_open = false;
+
+function open_archived_dialog(data) {
+	if(!archived_dialog_open) {
+		var template = $('#archived_template').html()
+		$('body').append(template);
+		$('#archived_dialog').dialog({
+			width:750,
+			height:500,
+			close: function() {
+				$('#archived_dialog').remove();
+				archived_dialog_open = false;
+			}
+		});
+		$('#archived_tabs').tabs();
+		archived_dialog_open = true;
+	}
+	
+	_.each(data,function(item,idx) {
+		console.log(data);
+	});
+	/*
+	a_loadavg_chart
+	a_requests_chart
+	a_cpu_chart
+	*/
+}
+
 
 var current_sort;
 
@@ -808,7 +863,6 @@ function update_hostname(new_hostname) {
 
 function update_request(data) {
 	if(seen[data._id]) {
-		console.log('ignoring');
 		return;
 	}
 
