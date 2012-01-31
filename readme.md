@@ -64,7 +64,7 @@ Stores conform to this interface:
 		get_machines: function(cb) {}
 	}
 ```
-The limit is the number of records you want to return.  The first record received is the number of records to expect.
+The limit is the number of records you want to return.  The first record received is the number of records to expect.  The find callback (cb) should emit the total record first, then a null record when finished.
 
 The supplied stores are:
 
@@ -100,7 +100,11 @@ var MemStore = function() {
    };
 
    this.find = function(query,limit,cb) {
-      cb(null,this.mem);
+      cb(null,{__total:this.mem.length});
+		_.each(this.mem,function(item) {
+			cb(null,item);
+		});
+		cb(null,null);
    };
 
    this.add_machine = function(rec) {
