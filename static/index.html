@@ -397,15 +397,12 @@ body {
 
 <script id="archived_template" type="text/template">
 <div id="archived_dialog" title="Archived Data">
+
 	<div id="archived_tabs">
 		<ul>
-			<li><a href="#tabs-1">CPU Chart</a></li>
 			<li><a href="#tabs-2">Load Average Chart</a></li>
 			<li><a href="#tabs-3">Requests Chart</a></li>
 		</ul>
-		<div id="tabs-1">
-			<div id="a_cpu_chart"></div>
-		</div>
 		<div id="tabs-2">
 			<div id="a_loadavg_chart"></div>
 		</div>
@@ -413,6 +410,12 @@ body {
 			<div id="a_requests_chart"></div>
 		</div>
 	</div>
+	<div id="archived_toggles">
+		<input type="radio" calc="avg" id="avg_toggle" name="radio" checked="checked" /><label for="avg_toggle">Avg</label>
+		<input type="radio" calc="max" id="max_toggle" name="radio" /><label for="max_toggle">High</label>
+		<input type="radio" calc="min" id="min_toggle" name="radio" /><label for="min_toggle">Low</label>
+	</div>
+
 </div>
 
 </script>
@@ -667,7 +670,6 @@ $('#start,#end').change(function(e) {
 	}
 });
 
-var archived_dialog_open = false;
 
 var archived_requests_options = {
       chart: {
@@ -707,13 +709,67 @@ var archived_requests_options = {
       }]
 };
 
-function open_archived_dialog(data) {
+var archived_loadavg_options={
+      chart: {
+         renderTo: 'a_loadavg_chart',
+         defaultSeriesType: 'spline'
+      },
+      title: {
+         text: 'Load Average'
+      },
+		xAxis: {
+			type: 'datetime',
+			tickPixelInterval:70
+		},
+		yAxis: {
+			title: { text: 'Load' }
+		},
+      tooltip: {
+         formatter: function() {
+				var time = new Date();
+				time.setTime(this.x);
+            return '<b>'+ time.format() +'</b><br>'+
+                this.series.name +': '+ (Math.round(this.y*100)/100);
+         }
+      },
+      legend: {
+         align: 'right',
+         x: -100,
+         verticalAlign: 'top',
+         y: 20,
+         floating: true,
+         backgroundColor: (Highcharts.theme && Highcharts.theme.legendBackgroundColorSolid) || 'white',
+         borderColor: '#CCC',
+         borderWidth: 1,
+         shadow: false
+      },
+      series: [
+		{
+         name: '1 minute',
+         data: []
+		},
+		{
+         name: '5 minute',
+         data: []
+      },
+		{
+         name: '15 minute',
+         data: []
+      }]
+};
+
+
+var archived_dialog_open = false;
+var current_archived_data;
+function open_archived_dialog(data,type) {
+	if(data) current_archived_data = data;
+	if(!type) type = 'avg';	
 	if(!archived_dialog_open) {
 		var template = $('#archived_template').html()
 		$('body').append(template);
 		$('#archived_dialog').dialog({
 			width:750,
-			height:500,
+			height:600,
 			close: function() {
 				$('#archived_dialog').remove();
 				archived_dialog_open = false;
@@ -721,27 +777,38 @@ function open_archived_dialog(data) {
 		});
 		$('#archived_tabs').tabs();
 		archived_dialog_open = true;
+		$('#archived_toggles').buttonset();
+		$('#archived_toggles input').click(function(e) {
+			open_archived_dialog(null,$(e.srcElement).attr('calc'));
+		});
 	}
 	
 	var req_data = [];	
 	var categories = [];
-	_.each(data,function(item,idx) {
-		console.log(item);
-		var date = new Date(item.measured_at).format();
-		categories.push(date);
-		req_data.push(item.requests.avg);
+	
+	var loadavg = [[],[],[]];
+
+	_.each(current_archived_data,function(item,idx) {
+		var date = new Date(item.measured_at);
+		var date_str = date.format()
+		var time = date.getTime();
+		categories.unshift(date_str);
+		// max min
+		req_data.unshift(item.requests[type]);
+	
+		loadavg[0].unshift({x:time,y:item.loadavg[0][type]});
+		loadavg[1].unshift({x:time,y:item.loadavg[1][type]});
+		loadavg[2].unshift({x:time,y:item.loadavg[2][type]});
 	});
-	categories.reverse();
-	req_data.reverse();
+
+	$('#ui-dialog-title-archived_dialog').html('Archived Data: '+ $('#start').val() + ' - ' + $('#end').val() + ' by hour');
 	archived_requests_options.xAxis.categories = categories;
 	archived_requests_options.series[0].data = req_data;
+	archived_loadavg_options.series[0].data = loadavg[0];
+	archived_loadavg_options.series[1].data = loadavg[1];
+	archived_loadavg_options.series[2].data = loadavg[2];
 	archived_requests_chart = new Highcharts.Chart(archived_requests_options);
-
-	/*
-	a_loadavg_chart
-	a_requests_chart
-	a_cpu_chart
-	*/
+	archived_loadavg_chart = new Highcharts.Chart(archived_loadavg_options);
 }
 
 
