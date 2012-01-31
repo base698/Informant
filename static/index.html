@@ -623,6 +623,7 @@ $('#start,#end').change(function(e) {
 		socket.on('QUERY_RESPONSE',function(msg) {
 			console.log(msg);
 			// user system idle
+			/*
 			if(msg.last) {
 				socket.removeListener('QUERY_RESPONSE');
 				var series = cpu_chart.series;
@@ -638,7 +639,7 @@ $('#start,#end').change(function(e) {
 				user_data.push(pt);
 				count++;
 			}
-
+			*/
 		});
 	}
 });
