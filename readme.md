@@ -7,7 +7,7 @@ Informant is a lightweight way to monitor server resources in real-time.  It can
 ```html
 http://<server where you are running informant>:2222/
 ```
-	![Screenshot](/static/screenshot.png)
+	![Screenshot](static/screenshot.png)
 
 ## How to Install
 
